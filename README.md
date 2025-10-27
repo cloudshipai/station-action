@@ -2,6 +2,8 @@
 
 Add AI-powered security scanning to your CI/CD pipeline in 3 lines.
 
+📚 **Documentation**: [Quick Start](QUICK_START.md) | [Deployment Guide](DEPLOYMENT_GUIDE.md) | [Examples](examples/)
+
 ## Quick Start
 
 ```yaml
