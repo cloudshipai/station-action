@@ -189,17 +189,12 @@ runs:
           const statusEmoji = exitCode === '0' ? '✅' : '⚠️';
           const statusText = exitCode === '0' ? 'Passed' : 'Issues Found';
 
-          const body = `## ${agentEmoji} CloudShip AI ${agentDescription}
-
-${statusEmoji} **Status**: ${statusText}
-
-Your pull request has been analyzed by **${agentName}**.
-
-**View detailed findings:** [CloudShip Dashboard](https://cloudshipai.com/dashboard)
-
-**Workflow run:** https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}
-
-_Powered by [CloudShip AI](https://cloudshipai.com)_`;
+          const body = '## ' + agentEmoji + ' CloudShip AI ' + agentDescription + '\n\n' +
+            statusEmoji + ' **Status**: ' + statusText + '\n\n' +
+            'Your pull request has been analyzed by **' + agentName + '**.\n\n' +
+            '**View detailed findings:** [CloudShip Dashboard](https://cloudshipai.com/dashboard)\n\n' +
+            '**Workflow run:** https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + '\n\n' +
+            '_Powered by [CloudShip AI](https://cloudshipai.com)_';
 
           await github.rest.issues.createComment({
             issue_number: context.issue.number,
