@@ -27,6 +27,10 @@ inputs:
     description: 'OpenAI API key (will use OPENAI_API_KEY secret if not provided)'
     required: false
 
+  cloudship_key:
+    description: 'CloudShip AI registration key for telemetry and monitoring (optional)'
+    required: false
+
   comment_pr:
     description: 'Post results as PR comment (true/false)'
     required: false
@@ -117,6 +121,18 @@ runs:
           exit 1
         fi
 
+        # Build environment variables for Docker
+        DOCKER_ENV_VARS="-e OPENAI_API_KEY=${OPENAI_KEY} -e PROJECT_ROOT=/workspace"
+
+        # Add CloudShip key if provided
+        CLOUDSHIP_KEY="${{ inputs.cloudship_key }}"
+        if [ -z "$CLOUDSHIP_KEY" ]; then
+          CLOUDSHIP_KEY="${{ env.STN_CLOUDSHIP_KEY }}"
+        fi
+        if [ -n "$CLOUDSHIP_KEY" ]; then
+          DOCKER_ENV_VARS="$DOCKER_ENV_VARS -e STN_CLOUDSHIP_KEY=${CLOUDSHIP_KEY}"
+        fi
+
         echo "::group::Running CloudShip AI Security Agent: ${{ steps.config.outputs.agent_name }}"
 
         if [ "${{ steps.config.outputs.agent_name }}" = "all" ]; then
@@ -125,8 +141,7 @@ runs:
             --privileged \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ github.workspace }}:/workspace \
-            -e OPENAI_API_KEY="${OPENAI_KEY}" \
-            -e PROJECT_ROOT=/workspace \
+            $DOCKER_ENV_VARS \
             ${{ inputs.docker_image }} \
             bash -c "
               for agent in 'Infrastructure Security Auditor' 'PR Security Reviewer' 'Supply Chain Guardian'; do
@@ -142,8 +157,7 @@ runs:
             --privileged \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v ${{ github.workspace }}:/workspace \
-            -e OPENAI_API_KEY="${OPENAI_KEY}" \
-            -e PROJECT_ROOT=/workspace \
+            $DOCKER_ENV_VARS \
             ${{ inputs.docker_image }} \
             stn agent run "${{ steps.config.outputs.agent_name }}" "${{ steps.config.outputs.task }}" --tail
         fi

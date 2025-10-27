@@ -172,6 +172,17 @@ jobs:
     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
+### With CloudShip AI Telemetry (Optional)
+
+```yaml
+- uses: cloudshipai/station-action@v1
+  with:
+    agent: infrastructure-security
+  env:
+    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    STN_CLOUDSHIP_KEY: ${{ secrets.CLOUDSHIP_KEY }}  # Optional: for telemetry and monitoring
+```
+
 ## Inputs
 
 | Input | Description | Required | Default |
@@ -179,6 +190,7 @@ jobs:
 | `agent` | Agent to run (infrastructure-security, pr-security, supply-chain, deployment-gate, security-advisor, security-metrics, or all) | No | `infrastructure-security` |
 | `task` | Custom task description to override default agent behavior | No | Agent-specific default |
 | `openai_api_key` | OpenAI API key (can also use OPENAI_API_KEY env var) | No | From env var |
+| `cloudship_key` | CloudShip AI registration key for telemetry and monitoring (can also use STN_CLOUDSHIP_KEY env var) | No | From env var |
 | `comment_pr` | Post results as PR comment (true/false) | No | `true` |
 | `fail_on_critical` | Fail workflow if critical issues found (true/false) | No | `false` |
 | `docker_image` | Override default CloudShip security image | No | `ghcr.io/cloudshipai/station-security:latest` |
