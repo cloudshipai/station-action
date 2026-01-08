@@ -271,16 +271,14 @@ runs:
         cd "$WORKSPACE_DIR"
         CONFIG_FILE="$WORKSPACE_DIR/.station-config.yaml"
         
-        cat > "$CONFIG_FILE" << EOF
-admin_username: admin
-ai_provider: ${STN_AI_PROVIDER:-openai}
-ai_model: ${STN_AI_MODEL:-gpt-4o-mini}
-database_url: /tmp/station.db
-workspace: $WORKSPACE_DIR
-local_mode: true
-api_port: 8585
-mcp_port: 8586
-EOF
+        echo "admin_username: admin" > "$CONFIG_FILE"
+        echo "ai_provider: ${STN_AI_PROVIDER:-openai}" >> "$CONFIG_FILE"
+        echo "ai_model: ${STN_AI_MODEL:-gpt-4o-mini}" >> "$CONFIG_FILE"
+        echo "database_url: /tmp/station.db" >> "$CONFIG_FILE"
+        echo "workspace: $WORKSPACE_DIR" >> "$CONFIG_FILE"
+        echo "local_mode: true" >> "$CONFIG_FILE"
+        echo "api_port: 8585" >> "$CONFIG_FILE"
+        echo "mcp_port: 8586" >> "$CONFIG_FILE"
         
         stn init --config "$CONFIG_FILE" --yes 2>/dev/null || true
         
