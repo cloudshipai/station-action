@@ -98,6 +98,38 @@ inputs:
     required: false
 
   # =============================================================================
+  # Secrets Backend (Optional - fetch secrets at runtime)
+  # =============================================================================
+  secrets-backend:
+    description: |
+      Runtime secrets backend. Station fetches secrets at startup instead of
+      requiring them as GitHub Secrets. Supported backends:
+        - aws-secretsmanager: AWS Secrets Manager (use with OIDC)
+        - aws-ssm: AWS Systems Manager Parameter Store
+        - vault: HashiCorp Vault
+        - gcp-secretmanager: Google Cloud Secret Manager
+      
+      When using AWS backends, configure OIDC authentication:
+        - uses: aws-actions/configure-aws-credentials@v4
+          with:
+            role-to-assume: arn:aws:iam::ACCOUNT:role/your-role
+            aws-region: us-east-1
+    required: false
+
+  secrets-path:
+    description: |
+      Path to secrets in the backend (required if secrets-backend is set):
+        - aws-secretsmanager: Secret name (e.g., "station/prod")
+        - aws-ssm: Parameter path prefix (e.g., "/station/prod/")
+        - vault: Secret path (e.g., "secret/data/station/prod")
+        - gcp-secretmanager: Secret name
+    required: false
+
+  secrets-region:
+    description: 'AWS region for secrets (optional, uses AWS_REGION if not set)'
+    required: false
+
+  # =============================================================================
   # Execution Options
   # =============================================================================
   timeout:
@@ -256,6 +288,9 @@ runs:
         STN_DEBUG: ${{ inputs.debug }}
         WORKSPACE_DIR: ${{ github.workspace }}
         CLOUDSHIP_API_KEY: ${{ inputs.cloudship-api-key }}
+        SECRETS_BACKEND: ${{ inputs.secrets-backend }}
+        SECRETS_PATH: ${{ inputs.secrets-path }}
+        SECRETS_REGION: ${{ inputs.secrets-region }}
       run: |
         cd "$WORKSPACE_DIR"
         CONFIG_FILE="$WORKSPACE_DIR/.station-config.yaml"
@@ -269,7 +304,14 @@ runs:
         echo "api_port: 8585" >> "$CONFIG_FILE"
         echo "mcp_port: 8586" >> "$CONFIG_FILE"
         
-        # OAuth configuration (for Anthropic OAuth)
+        if [ -n "$SECRETS_BACKEND" ]; then
+          echo "🔐 Configuring secrets backend: $SECRETS_BACKEND"
+          echo "secrets:" >> "$CONFIG_FILE"
+          echo "  backend: $SECRETS_BACKEND" >> "$CONFIG_FILE"
+          [ -n "$SECRETS_PATH" ] && echo "  path: $SECRETS_PATH" >> "$CONFIG_FILE"
+          [ -n "$SECRETS_REGION" ] && echo "  region: $SECRETS_REGION" >> "$CONFIG_FILE"
+        fi
+        
         if [ "${STN_AI_AUTH_TYPE:-}" = "oauth" ]; then
           echo "ai_auth_type: oauth" >> "$CONFIG_FILE"
           [ -n "${STN_AI_OAUTH_TOKEN:-}" ] && echo "ai_oauth_token: ${STN_AI_OAUTH_TOKEN}" >> "$CONFIG_FILE"
@@ -339,12 +381,13 @@ runs:
       id: run
       shell: bash
       env:
-        # AI Provider Configuration (from inputs)
         STN_AI_PROVIDER: ${{ inputs.provider }}
         STN_AI_MODEL: ${{ inputs.model }}
         STN_AI_BASE_URL: ${{ inputs.base-url }}
         STN_DEBUG: ${{ inputs.debug }}
-        # Execution config
+        STN_SECRETS_BACKEND: ${{ inputs.secrets-backend }}
+        STN_SECRETS_PATH: ${{ inputs.secrets-path }}
+        STN_SECRETS_REGION: ${{ inputs.secrets-region }}
         AGENT_NAME: ${{ inputs.agent }}
         AGENT_TASK: ${{ inputs.task }}
         ENVIRONMENT: ${{ inputs.environment }}
@@ -353,7 +396,7 @@ runs:
         SOURCE_TYPE: ${{ steps.prepare.outputs.source_type }}
         BUNDLE_PATH: ${{ steps.prepare.outputs.bundle_path }}
       run: |
-        set +e  # Don't exit on error, capture exit code
+        set +e
 
         cd "${{ github.workspace }}"
 
@@ -361,6 +404,7 @@ runs:
         echo "📝 Task: $AGENT_TASK"
         echo "🔧 Provider: ${STN_AI_PROVIDER:-openai}"
         [ -n "$STN_AI_MODEL" ] && echo "🧠 Model: $STN_AI_MODEL"
+        [ -n "$STN_SECRETS_BACKEND" ] && echo "🔐 Secrets: $STN_SECRETS_BACKEND ($STN_SECRETS_PATH)"
 
         if [ "$SOURCE_TYPE" = "bundle" ] && [ -n "$BUNDLE_PATH" ]; then
           cd "$BUNDLE_PATH"
