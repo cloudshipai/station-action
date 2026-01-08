@@ -259,6 +259,7 @@ runs:
     # Step 3: Initialize Station
     # =========================================================================
     - name: Initialize Station
+      id: init
       shell: bash
       env:
         STN_AI_PROVIDER: ${{ inputs.provider }}
@@ -268,12 +269,20 @@ runs:
         WORKSPACE_DIR: ${{ github.workspace }}
       run: |
         cd "$WORKSPACE_DIR"
-
         CONFIG_FILE="$WORKSPACE_DIR/.station-config.yaml"
         
-        stn init --config "$CONFIG_FILE" --yes 2>/dev/null || true
+        cat > "$CONFIG_FILE" << EOF
+admin_username: admin
+ai_provider: ${STN_AI_PROVIDER:-openai}
+ai_model: ${STN_AI_MODEL:-gpt-4o-mini}
+database_url: /tmp/station.db
+workspace: $WORKSPACE_DIR
+local_mode: true
+api_port: 8585
+mcp_port: 8586
+EOF
         
-        sed -i "s|database_url:.*|database_url: /tmp/station.db|" "$CONFIG_FILE"
+        stn init --config "$CONFIG_FILE" --yes 2>/dev/null || true
         
         echo "config_file=$CONFIG_FILE" >> $GITHUB_OUTPUT
         echo "✅ Station initialized"
