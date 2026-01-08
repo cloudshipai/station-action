@@ -249,6 +249,7 @@ runs:
         STN_AI_BASE_URL: ${{ inputs.base-url }}
         STN_DEBUG: ${{ inputs.debug }}
         WORKSPACE_DIR: ${{ github.workspace }}
+        CLOUDSHIP_API_KEY: ${{ inputs.cloudship-api-key }}
       run: |
         cd "$WORKSPACE_DIR"
         CONFIG_FILE="$WORKSPACE_DIR/.station-config.yaml"
@@ -261,6 +262,12 @@ runs:
         echo "local_mode: true" >> "$CONFIG_FILE"
         echo "api_port: 8585" >> "$CONFIG_FILE"
         echo "mcp_port: 8586" >> "$CONFIG_FILE"
+        
+        if [ -n "$CLOUDSHIP_API_KEY" ]; then
+          echo "cloudship:" >> "$CONFIG_FILE"
+          echo "  enabled: true" >> "$CONFIG_FILE"
+          echo "  registration_key: $CLOUDSHIP_API_KEY" >> "$CONFIG_FILE"
+        fi
         
         stn init --config "$CONFIG_FILE" --yes 2>/dev/null || true
         
