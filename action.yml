@@ -67,9 +67,15 @@ inputs:
       AI provider to use: 'openai', 'anthropic', 'gemini', or 'ollama'.
       Defaults to 'openai'. Each provider requires its own API key:
         - openai: OPENAI_API_KEY
-        - anthropic: ANTHROPIC_API_KEY
+        - anthropic: ANTHROPIC_API_KEY (or OAuth - see below)
         - gemini: GOOGLE_API_KEY or GEMINI_API_KEY
         - ollama: No key needed, set base-url to your Ollama instance
+      
+      OAuth Authentication (Anthropic):
+        Set STN_AI_AUTH_TYPE=oauth and provide these env vars:
+        - STN_AI_OAUTH_TOKEN: OAuth access token
+        - STN_AI_OAUTH_REFRESH_TOKEN: OAuth refresh token  
+        - STN_AI_OAUTH_EXPIRES_AT: Token expiry (milliseconds)
     required: false
     default: 'openai'
 
@@ -262,6 +268,14 @@ runs:
         echo "local_mode: true" >> "$CONFIG_FILE"
         echo "api_port: 8585" >> "$CONFIG_FILE"
         echo "mcp_port: 8586" >> "$CONFIG_FILE"
+        
+        # OAuth configuration (for Anthropic OAuth)
+        if [ "${STN_AI_AUTH_TYPE:-}" = "oauth" ]; then
+          echo "ai_auth_type: oauth" >> "$CONFIG_FILE"
+          [ -n "${STN_AI_OAUTH_TOKEN:-}" ] && echo "ai_oauth_token: ${STN_AI_OAUTH_TOKEN}" >> "$CONFIG_FILE"
+          [ -n "${STN_AI_OAUTH_REFRESH_TOKEN:-}" ] && echo "ai_oauth_refresh_token: ${STN_AI_OAUTH_REFRESH_TOKEN}" >> "$CONFIG_FILE"
+          [ -n "${STN_AI_OAUTH_EXPIRES_AT:-}" ] && echo "ai_oauth_expires_at: ${STN_AI_OAUTH_EXPIRES_AT}" >> "$CONFIG_FILE"
+        fi
         
         if [ -n "$CLOUDSHIP_API_KEY" ]; then
           echo "cloudship:" >> "$CONFIG_FILE"
