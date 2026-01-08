@@ -265,11 +265,17 @@ runs:
         STN_AI_MODEL: ${{ inputs.model }}
         STN_AI_BASE_URL: ${{ inputs.base-url }}
         STN_DEBUG: ${{ inputs.debug }}
+        WORKSPACE_DIR: ${{ github.workspace }}
       run: |
-        cd "${{ github.workspace }}"
+        cd "$WORKSPACE_DIR"
 
-        stn init --config /tmp/station-config.yaml --yes 2>/dev/null || true
-
+        CONFIG_FILE="$WORKSPACE_DIR/.station-config.yaml"
+        
+        stn init --config "$CONFIG_FILE" --yes 2>/dev/null || true
+        
+        sed -i "s|database_url:.*|database_url: /tmp/station.db|" "$CONFIG_FILE"
+        
+        echo "config_file=$CONFIG_FILE" >> $GITHUB_OUTPUT
         echo "✅ Station initialized"
 
     # =========================================================================
@@ -299,13 +305,14 @@ runs:
         echo "🔄 Syncing environment: $ENVIRONMENT"
         echo "   Loading agents and MCP server configurations..."
 
-        if stn sync "$ENVIRONMENT" --config /tmp/station-config.yaml -i=false 2>&1; then
+        CONFIG_FILE="${{ github.workspace }}/.station-config.yaml"
+        if stn sync "$ENVIRONMENT" --config "$CONFIG_FILE" -i=false 2>&1; then
           echo "✅ Environment synced successfully"
 
           # List available agents for debugging
           echo ""
           echo "📋 Available agents:"
-          stn agent list --config /tmp/station-config.yaml --env "$ENVIRONMENT" 2>/dev/null || echo "   (no agents found)"
+          stn agent list --config "$CONFIG_FILE" --env "$ENVIRONMENT" 2>/dev/null || echo "   (no agents found)"
         else
           echo "⚠️ Warning: Sync failed, agent may not be available"
           echo "   Check that environments/$ENVIRONMENT/ exists and contains valid configs"
@@ -345,8 +352,9 @@ runs:
           cd "$BUNDLE_PATH"
         fi
 
+        CONFIG_FILE="${{ github.workspace }}/.station-config.yaml"
         RESULT=$(stn agent run "$AGENT_NAME" "$AGENT_TASK" \
-          --config /tmp/station-config.yaml \
+          --config "$CONFIG_FILE" \
           --env "$ENVIRONMENT" \
           --tail 2>&1) || true
 
