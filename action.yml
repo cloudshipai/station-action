@@ -261,7 +261,6 @@ runs:
     - name: Initialize Station
       shell: bash
       env:
-        # AI Provider Configuration
         STN_AI_PROVIDER: ${{ inputs.provider }}
         STN_AI_MODEL: ${{ inputs.model }}
         STN_AI_BASE_URL: ${{ inputs.base-url }}
@@ -269,8 +268,7 @@ runs:
       run: |
         cd "${{ github.workspace }}"
 
-        # Create minimal config if no environment exists
-        stn init --config ./config.yaml --yes 2>/dev/null || true
+        stn init --config /tmp/station-config.yaml --yes 2>/dev/null || true
 
         echo "✅ Station initialized"
 
@@ -301,13 +299,13 @@ runs:
         echo "🔄 Syncing environment: $ENVIRONMENT"
         echo "   Loading agents and MCP server configurations..."
 
-        if stn sync "$ENVIRONMENT" --config ./config.yaml -i=false 2>&1; then
+        if stn sync "$ENVIRONMENT" --config /tmp/station-config.yaml -i=false 2>&1; then
           echo "✅ Environment synced successfully"
 
           # List available agents for debugging
           echo ""
           echo "📋 Available agents:"
-          stn agent list --config ./config.yaml --env "$ENVIRONMENT" 2>/dev/null || echo "   (no agents found)"
+          stn agent list --config /tmp/station-config.yaml --env "$ENVIRONMENT" 2>/dev/null || echo "   (no agents found)"
         else
           echo "⚠️ Warning: Sync failed, agent may not be available"
           echo "   Check that environments/$ENVIRONMENT/ exists and contains valid configs"
@@ -348,7 +346,7 @@ runs:
         fi
 
         RESULT=$(stn agent run "$AGENT_NAME" "$AGENT_TASK" \
-          --config ./config.yaml \
+          --config /tmp/station-config.yaml \
           --env "$ENVIRONMENT" \
           --tail 2>&1) || true
 
