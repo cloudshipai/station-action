@@ -284,7 +284,7 @@ runs:
         SOURCE_TYPE: ${{ steps.prepare.outputs.source_type }}
         BUNDLE_PATH: ${{ steps.prepare.outputs.bundle_path }}
         BUNDLE_ID: ${{ steps.prepare.outputs.bundle_id }}
-        CLOUDSHIP_API_KEY: ${{ inputs.cloudship-api-key }}
+        STN_CLOUDSHIP_KEY: ${{ inputs.cloudship-api-key }}
         STN_DEBUG: ${{ inputs.debug }}
       run: |
         cd "${{ github.workspace }}"
