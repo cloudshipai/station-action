@@ -219,27 +219,9 @@ runs:
             exit 1
           fi
 
-          echo "📦 Downloading bundle from CloudShip: $BUNDLE_ID"
-          CLOUDSHIP_API_URL="${CLOUDSHIP_API_URL:-https://api.cloudshipai.com}"
-          DOWNLOAD_URL="${CLOUDSHIP_API_URL}/api/public/bundles/${BUNDLE_ID}/download/"
-
-          mkdir -p /tmp/station-bundle
-          HTTP_CODE=$(curl -sS -w "%{http_code}" \
-            -H "X-Registration-Key: ${CLOUDSHIP_API_KEY}" \
-            -o /tmp/station-bundle/bundle.tar.gz \
-            "$DOWNLOAD_URL")
-
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "❌ Error: Failed to download bundle (HTTP $HTTP_CODE)"
-            exit 1
-          fi
-
-          cd /tmp/station-bundle
-          tar -xzf bundle.tar.gz
-          rm bundle.tar.gz
-          BUNDLE_PATH="/tmp/station-bundle"
-          echo "bundle_path=$BUNDLE_PATH" >> $GITHUB_OUTPUT
-          echo "source_type=bundle" >> $GITHUB_OUTPUT
+          echo "📦 Will install bundle from CloudShip: $BUNDLE_ID"
+          echo "bundle_id=$BUNDLE_ID" >> $GITHUB_OUTPUT
+          echo "source_type=bundle-id" >> $GITHUB_OUTPUT
 
         else
           # Use local environment
@@ -286,44 +268,47 @@ runs:
         echo "✅ Station initialized"
 
     # =========================================================================
-    # Step 3.5: Sync Environment (load agents and MCP configs)
+    # Step 3.5: Install Bundle or Sync Environment
     # =========================================================================
-    - name: Sync environment
+    - name: Install bundle or sync environment
       shell: bash
       env:
         ENVIRONMENT: ${{ inputs.environment }}
         SOURCE_TYPE: ${{ steps.prepare.outputs.source_type }}
         BUNDLE_PATH: ${{ steps.prepare.outputs.bundle_path }}
+        BUNDLE_ID: ${{ steps.prepare.outputs.bundle_id }}
+        CLOUDSHIP_API_KEY: ${{ inputs.cloudship-api-key }}
         STN_DEBUG: ${{ inputs.debug }}
       run: |
         cd "${{ github.workspace }}"
+        CONFIG_FILE="${{ github.workspace }}/.station-config.yaml"
 
-        # Skip sync if minimal source (no environment directory)
         if [ "$SOURCE_TYPE" = "minimal" ]; then
           echo "⏭️ Skipping sync (minimal configuration)"
           exit 0
         fi
 
-        # For bundles, sync from bundle directory
-        if [ "$SOURCE_TYPE" = "bundle" ] && [ -n "$BUNDLE_PATH" ]; then
-          cd "$BUNDLE_PATH"
-        fi
-
-        echo "🔄 Syncing environment: $ENVIRONMENT"
-        echo "   Loading agents and MCP server configurations..."
-
-        CONFIG_FILE="${{ github.workspace }}/.station-config.yaml"
-        if stn sync "$ENVIRONMENT" --config "$CONFIG_FILE" -i=false 2>&1; then
-          echo "✅ Environment synced successfully"
-
-          # List available agents for debugging
-          echo ""
-          echo "📋 Available agents:"
-          stn agent list --config "$CONFIG_FILE" --env "$ENVIRONMENT" 2>/dev/null || echo "   (no agents found)"
+        if [ "$SOURCE_TYPE" = "bundle-id" ]; then
+          echo "📦 Installing bundle from CloudShip: $BUNDLE_ID"
+          stn bundle install "$BUNDLE_ID" "$ENVIRONMENT" --config "$CONFIG_FILE" --force 2>&1
+          echo "✅ Bundle installed"
+        elif [ "$SOURCE_TYPE" = "bundle" ] && [ -n "$BUNDLE_PATH" ]; then
+          echo "📦 Installing bundle from path: $BUNDLE_PATH"
+          BUNDLE_FILE=$(find "$BUNDLE_PATH" -name "*.tar.gz" | head -1)
+          if [ -n "$BUNDLE_FILE" ]; then
+            stn bundle install "$BUNDLE_FILE" "$ENVIRONMENT" --config "$CONFIG_FILE" --force 2>&1
+          else
+            cd "$BUNDLE_PATH"
+            stn sync "$ENVIRONMENT" --config "$CONFIG_FILE" -i=false 2>&1
+          fi
+          echo "✅ Bundle installed"
         else
-          echo "⚠️ Warning: Sync failed, agent may not be available"
-          echo "   Check that environments/$ENVIRONMENT/ exists and contains valid configs"
+          echo "🔄 Syncing environment: $ENVIRONMENT"
+          stn sync "$ENVIRONMENT" --config "$CONFIG_FILE" -i=false 2>&1
         fi
+
+        echo "📋 Available agents:"
+        stn agent list --config "$CONFIG_FILE" --env "$ENVIRONMENT" 2>/dev/null || echo "   (no agents found)"
 
     # =========================================================================
     # Step 4: Run Agent
