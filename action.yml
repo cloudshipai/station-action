@@ -298,17 +298,18 @@ runs:
         if [ "$SOURCE_TYPE" = "bundle-id" ]; then
           echo "📦 Installing bundle from CloudShip: $BUNDLE_ID"
           stn bundle install "$BUNDLE_ID" "$ENVIRONMENT" --config "$CONFIG_FILE" --force 2>&1
-          echo "✅ Bundle installed"
+          echo "🔄 Syncing agents and MCP configs..."
+          stn sync "$ENVIRONMENT" --config "$CONFIG_FILE" -i=false 2>&1
+          echo "✅ Bundle installed and synced"
         elif [ "$SOURCE_TYPE" = "bundle" ] && [ -n "$BUNDLE_PATH" ]; then
           echo "📦 Installing bundle from path: $BUNDLE_PATH"
           BUNDLE_FILE=$(find "$BUNDLE_PATH" -name "*.tar.gz" | head -1)
           if [ -n "$BUNDLE_FILE" ]; then
             stn bundle install "$BUNDLE_FILE" "$ENVIRONMENT" --config "$CONFIG_FILE" --force 2>&1
-          else
-            cd "$BUNDLE_PATH"
-            stn sync "$ENVIRONMENT" --config "$CONFIG_FILE" -i=false 2>&1
           fi
-          echo "✅ Bundle installed"
+          echo "🔄 Syncing agents and MCP configs..."
+          stn sync "$ENVIRONMENT" --config "$CONFIG_FILE" -i=false 2>&1
+          echo "✅ Bundle installed and synced"
         else
           echo "🔄 Syncing environment: $ENVIRONMENT"
           stn sync "$ENVIRONMENT" --config "$CONFIG_FILE" -i=false 2>&1
